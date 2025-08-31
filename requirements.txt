@@ -1,6 +1,5 @@
-fastapi==0.112.0
-uvicorn[standard]==0.30.5
-transformers==4.43.3
-sentencepiece==0.2.0
-sacremoses==0.1.1
-torch --index-url https://download.pytorch.org/whl/cpu
+fastapi==0.100.0
+uvicorn==0.22.0
+transformers==4.31.0
+sentencepiece==0.1.99
+torch==2.0.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
