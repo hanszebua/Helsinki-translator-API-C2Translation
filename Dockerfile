@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM python:3.11-slim
+FROM python:3.11-bullseye
 
 # System packages (git to fetch model from HF hub; build-essential sometimes helps wheels)
 RUN apt-get update && apt-get install -y --no-install-recommends \
