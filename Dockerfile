@@ -1,32 +1,32 @@
-# Use an official Python base image (slim)
+# syntax=docker/dockerfile:1
 FROM python:3.11-slim
 
-# Prevent Python from writing .pyc files and enable stdout/stderr buffering
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-# Install system deps needed for building/transformers
+# System packages (git to fetch model from HF hub; build-essential sometimes helps wheels)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential curl git && \
-    rm -rf /var/lib/apt/lists/*
+    git curl build-essential \
+  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy requirements first to leverage Docker cache
+# Install Python deps first (better layer caching)
 COPY requirements.txt /app/
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Python deps. We refer to CPU torch wheel via requirements.txt
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+# Convert the HF model to CTranslate2 format (int8 quantization)
+# This runs at build time so the container starts fast later.
+# We also copy tokenizer files so runtime can detokenize.
+RUN ct2-transformers-converter \
+      --model Helsinki-NLP/opus-mt-en-fr \
+      --output_dir /app/ct2_enfr \
+      --quantization int8 \
+      --force
 
-# Copy app code
-COPY . /app
+# App code last (so editing app doesn't invalidate earlier layers)
+COPY main.py /app/main.py
 
-# Make a directory for models/cache so you can mount later if you want
-RUN mkdir -p /app/model_cache
+# Expose a predictable env var for the model path
+ENV CT2_MODEL_DIR=/app/ct2_enfr
+ENV PORT=8000
 
-# Expose port (same as uvicorn default)
-EXPOSE 8000
-
-# Start command
+# Run the API
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
